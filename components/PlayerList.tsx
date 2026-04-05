@@ -15,13 +15,13 @@ export function PlayerList({ players, highlightId, ownerId }: Props) {
         return (
           <li
             key={p.id}
-            className={`flex items-center justify-between rounded-2xl border px-4 py-3 text-sm shadow-sm transition-colors ${
+            className={`flex items-center justify-between rounded-xl border-2 px-4 py-3 text-sm transition-colors ${
               active
-                ? "border-slate-900 bg-slate-50"
-                : "border-slate-200 bg-white hover:border-slate-300"
+                ? "border-[#0B0F14] bg-[#b8e0d2]"
+                : "border-[#0B0F14]/25 bg-white hover:border-[#0B0F14]/50"
             }`}
           >
-            <span className="font-medium text-slate-800">
+            <span className="font-medium text-[#0B0F14]">
               {host ? (
                 <span className="mr-1" title="Room owner" aria-hidden>
                   👑
@@ -29,7 +29,7 @@ export function PlayerList({ players, highlightId, ownerId }: Props) {
               ) : null}
               {p.name}
             </span>
-            <span className="text-xs text-slate-500 tabular-nums">{p.cardCount} cards</span>
+            <span className="text-xs tabular-nums text-[#0B0F14]/55">{p.cardCount} cards</span>
           </li>
         );
       })}

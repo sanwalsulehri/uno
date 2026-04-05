@@ -16,6 +16,8 @@ export type Room = {
   gameStarted: boolean;
   gameOver: { winnerId: string; winnerName: string } | null;
   activeColor: CardColor;
+  /** Cards the current player must draw if they cannot stack +2 (on +2) or +4 (on +4). */
+  pendingDraw: number;
 };
 
 const COLORS: CardColor[] = ["red", "blue", "green", "yellow"];
@@ -33,19 +35,25 @@ function shuffle<T>(arr: T[]): T[] {
   return a;
 }
 
+function modTurn(i: number, n: number): number {
+  return ((i % n) + n) % n;
+}
+
+/** Standard UNO: 108 cards — one 0 per color, two of 1–9, two each Skip / Reverse / Draw Two, 4 Wild, 4 Wild +4. */
 export function buildDeck(): Card[] {
   const deck: Card[] = [];
   for (const color of COLORS) {
-    for (let n = 0; n <= 9; n++) {
+    deck.push({ color, number: 0 });
+    for (let n = 1; n <= 9; n++) {
       deck.push({ color, number: n });
       deck.push({ color, number: n });
     }
-    deck.push({ color, number: 10 });
-    deck.push({ color, number: 10 });
+    deck.push({ color, number: 10 }, { color, number: 10 });
+    deck.push({ color, number: 13 }, { color, number: 13 });
+    deck.push({ color, number: 14 }, { color, number: 14 });
   }
   for (let i = 0; i < 4; i++) {
-    deck.push({ color: "black", number: 11 });
-    deck.push({ color: "black", number: 12 });
+    deck.push({ color: "black", number: 11 }, { color: "black", number: 12 });
   }
   return shuffle(deck);
 }
@@ -59,13 +67,31 @@ function isWild(card: Card): boolean {
   return card.color === "black" && (card.number === 11 || card.number === 12);
 }
 
-export function canPlay(card: Card, top: Card | null, activeColor: CardColor): boolean {
+export function canPlay(
+  card: Card,
+  top: Card | null,
+  activeColor: CardColor,
+  hand?: Card[],
+  pendingDraw = 0
+): boolean {
+  if (pendingDraw > 0) {
+    if (!top) return false;
+    if (top.number === 10) return card.number === 10;
+    if (top.number === 12) return card.number === 12;
+    return false;
+  }
   if (!top) return true;
+  if (card.number === 12 && hand) {
+    const hasColorMatch = hand.some((c) => c.color !== "black" && c.color === activeColor);
+    if (hasColorMatch) return false;
+  }
   if (isWild(card)) return true;
   if (isWild(top)) {
     return card.color === activeColor || isWild(card);
   }
   if (card.number === 10 && top.number === 10) return true;
+  if (card.number === 13 && top.number === 13) return true;
+  if (card.number === 14 && top.number === 14) return true;
   if (card.color === top.color) return true;
   if (card.number === top.number) return true;
   return false;
@@ -111,6 +137,7 @@ export function createRoom(nickname: string): { room: Room; playerId: string } {
     gameStarted: false,
     gameOver: null,
     activeColor: "red",
+    pendingDraw: 0,
   };
   rooms.set(roomId, room);
   return { room, playerId };
@@ -152,12 +179,16 @@ export function startGame(
     p.cards = [];
   });
 
-  for (let i = 0; i < 5; i++) {
+  for (let i = 0; i < 7; i++) {
     for (const p of room.players) {
       ensureDeckNotEmpty(room);
       const c = room.deck.pop();
       if (c) p.cards.push(c);
     }
+  }
+
+  function isValidStarter(c: Card): boolean {
+    return !isWild(c) && c.number >= 0 && c.number <= 9;
   }
 
   ensureDeckNotEmpty(room);
@@ -167,7 +198,7 @@ export function startGame(
   }
   if (!starter) return { ok: false, error: "Could not start game" };
 
-  while (starter !== undefined && isWild(starter) && room.deck.length > 0) {
+  while (starter !== undefined && !isValidStarter(starter) && room.deck.length > 0) {
     room.deck.unshift(starter);
     starter = room.deck.pop();
   }
@@ -179,15 +210,35 @@ export function startGame(
     : (starter.color as CardColor);
   room.currentTurn = 0;
   room.direction = 1;
+  room.pendingDraw = 0;
   room.gameStarted = true;
   return { ok: true };
 }
 
 function validCardShape(color: string, number: number): boolean {
-  if (!Number.isInteger(number) || number < 0 || number > 12) return false;
+  if (!Number.isInteger(number) || number < 0 || number > 14) return false;
   if (number === 11 || number === 12) return color === "black";
   if (color === "black") return false;
   return COLORS.includes(color as CardColor);
+}
+
+function drawCardsToPlayer(room: Room, playerIndex: number, count: number): void {
+  const p = room.players[playerIndex];
+  if (!p) return;
+  for (let i = 0; i < count; i++) {
+    ensureDeckNotEmpty(room);
+    if (room.deck.length === 0) return;
+    p.cards.push(room.deck.pop()!);
+  }
+}
+
+function advanceTurn(room: Room, steps: number): void {
+  const n = room.players.length;
+  let t = room.currentTurn;
+  for (let s = 0; s < steps; s++) {
+    t = modTurn(t + room.direction, n);
+  }
+  room.currentTurn = t;
 }
 
 export function playCard(
@@ -222,7 +273,15 @@ export function playCard(
 
   const cardToPlay = player.cards[cardIndex]!;
   const top = topDiscard(room);
-  if (!canPlay(cardToPlay, top, room.activeColor)) return { ok: false, error: "Cannot play that card" };
+  if (!canPlay(cardToPlay, top, room.activeColor, player.cards, room.pendingDraw)) {
+    return {
+      ok: false,
+      error:
+        room.pendingDraw > 0
+          ? "Stack with another +2 or +4, or draw to take the penalty"
+          : "Cannot play that card",
+    };
+  }
 
   player.cards.splice(cardIndex, 1);
   room.discardPile.push(cardToPlay);
@@ -245,7 +304,27 @@ export function playCard(
   }
 
   const n = room.players.length;
-  room.currentTurn = (room.currentTurn + room.direction + n) % n;
+  const num = cardToPlay.number;
+
+  if (num === 10) {
+    room.pendingDraw += 2;
+    advanceTurn(room, 1);
+  } else if (num === 12) {
+    room.pendingDraw += 4;
+    advanceTurn(room, 1);
+  } else if (num === 13) {
+    advanceTurn(room, 2);
+  } else if (num === 14) {
+    room.direction = room.direction === 1 ? -1 : 1;
+    if (n === 2) {
+      /* Reverse with 2 players = Skip opponent; same player plays again */
+    } else {
+      advanceTurn(room, 1);
+    }
+  } else {
+    advanceTurn(room, 1);
+  }
+
   return { ok: true };
 }
 
@@ -259,17 +338,24 @@ export function drawCard(roomId: string, playerId: string): { ok: true } | { ok:
   const player = room.players.find((p) => p.id === playerId);
   if (!player) return { ok: false, error: "Player not in room" };
 
+  if (room.pendingDraw > 0) {
+    const owed = room.pendingDraw;
+    drawCardsToPlayer(room, room.currentTurn, owed);
+    room.pendingDraw = 0;
+    advanceTurn(room, 1);
+    return { ok: true };
+  }
+
   const top = topDiscard(room);
   ensureDeckNotEmpty(room);
   if (room.deck.length === 0) return { ok: false, error: "No cards to draw" };
 
   const drawn = room.deck.pop()!;
-  const playable = canPlay(drawn, top, room.activeColor);
+  const playable = canPlay(drawn, top, room.activeColor, [...player.cards, drawn], 0);
   player.cards.push(drawn);
 
   if (!playable) {
-    const n = room.players.length;
-    room.currentTurn = (room.currentTurn + room.direction + n) % n;
+    advanceTurn(room, 1);
   }
 
   return { ok: true };
@@ -307,6 +393,7 @@ export function gameSnapshot(room: Room, playerId: string) {
     currentTurnPlayerId: currentPlayer ? currentPlayer.id : null,
     currentTurnPlayerName: currentPlayer ? currentPlayer.name : null,
     direction: room.direction,
+    pendingDraw: room.pendingDraw,
     players: room.players.map((p) => ({
       id: p.id,
       name: p.name,

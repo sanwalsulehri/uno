@@ -1,6 +1,9 @@
 export type CardColor = "red" | "blue" | "green" | "yellow";
 
-/** 0–9 number cards; 10 = Draw Two (+2); 11 = Wild; 12 = Wild Draw Four (+4). Black only for 11/12. */
+/**
+ * Colored: 0–9, 10 = Draw Two (+2), 13 = Skip, 14 = Reverse.
+ * Black: 11 = Wild, 12 = Wild Draw Four (+4).
+ */
 export type Card = { color: CardColor | "black"; number: number };
 
 export type RoomPlayer = { id: string; name: string; cardCount: number };
@@ -28,6 +31,8 @@ export type GameState = {
   currentTurnPlayerId: string | null;
   currentTurnPlayerName: string | null;
   direction: number;
+  /** If > 0, current player must stack +2 (on +2) or +4 (on +4), or draw this many cards. */
+  pendingDraw: number;
   players: RoomPlayer[];
   gameOver: GameOver;
 };

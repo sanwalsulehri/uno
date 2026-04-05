@@ -81,23 +81,23 @@ export default function LobbyPage() {
       <Head>
         <title>{roomId ? `Lobby · ${roomId}` : "Lobby"}</title>
       </Head>
-      <div className="min-h-screen px-4 py-10 bg-[#eceff4]">
-        <div className="max-w-lg mx-auto">
-          <div className="flex items-center justify-between mb-8">
-            <Link href="/" className="text-sm font-medium text-slate-600 hover:text-slate-900">
+      <div className="game-shell-bg min-h-screen px-4 py-10">
+        <div className="mx-auto max-w-lg">
+          <div className="mb-8 flex items-center justify-between">
+            <Link href="/" className="text-sm font-semibold text-[#0B0F14]/70 transition-colors hover:text-[#0B0F14]">
               ← Home
             </Link>
-            <span className="text-xs font-medium text-slate-500">
+            <span className="text-xs font-medium text-[#0B0F14]/75">
               {lobby?.ownerId === playerId ? <span aria-hidden>👑 </span> : null}
               {nickname}
             </span>
           </div>
 
-          <div className="rounded-3xl bg-white border border-slate-200/90 shadow-[0_20px_50px_rgba(0,0,0,0.06)] p-8">
-            <h1 className="text-2xl font-bold text-slate-900">Lobby 🍕</h1>
-            <p className="mt-1 text-slate-500">
+          <div className="rounded-2xl border-4 border-[#0B0F14] bg-[#FFFDF8] p-8">
+            <h1 className="font-display text-3xl font-semibold tracking-tight text-[#0B0F14]">Lobby</h1>
+            <p className="mt-1 text-[#0B0F14]/60">
               Room code:{" "}
-              <span className="font-mono font-semibold tracking-[0.15em] text-slate-800">{roomId || "…"}</span>
+              <span className="font-mono font-semibold tracking-[0.15em] text-[#0B0F14]">{roomId || "…"}</span>
             </p>
 
             {lobby?.gameOver ? (
@@ -111,13 +111,13 @@ export default function LobbyPage() {
             ) : null}
 
             <div className="mt-8">
-              <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-3">
+              <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-[#0B0F14]/55">
                 Players ({lobby?.playerCount ?? 0}/4)
               </h2>
               {lobby ? (
                 <PlayerList players={lobby.players} highlightId={playerId} ownerId={lobby.ownerId} />
               ) : (
-                <p className="text-slate-400 text-sm">Loading…</p>
+                <p className="text-sm text-[#0B0F14]/45">Loading…</p>
               )}
             </div>
 
@@ -130,10 +130,10 @@ export default function LobbyPage() {
                 {starting ? "Starting…" : "Start game"}
               </Button>
               {lobby && lobby.playerCount < 2 && !lobby.gameStarted ? (
-                <p className="text-center text-sm text-slate-500">Need at least two players to start.</p>
+                <p className="text-center text-sm text-[#0B0F14]/60">Need at least two players to start.</p>
               ) : null}
               {lobby && lobby.playerCount >= 2 && !lobby.gameStarted && !isOwner ? (
-                <p className="text-center text-sm text-slate-500">Only 👑 the room owner can start the game.</p>
+                <p className="text-center text-sm text-[#0B0F14]/60">Only 👑 the room owner can start the game.</p>
               ) : null}
             </div>
           </div>

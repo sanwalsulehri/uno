@@ -7,15 +7,16 @@ import { CardBack } from "@/components/CardBack";
 import { PlayingCard } from "@/components/PlayingCard";
 import type { Card, CardColor, GameState } from "@/lib/types";
 import { HAND_OVERLAP_L, OPPONENT_STACK_OVERLAP, TABLE_CARD_CLASS } from "@/lib/cardLayout";
+import { isCardPlayable } from "@/lib/playable";
 import { getPlayerId, STORAGE_NICKNAME } from "@/lib/session";
 
 const POLL_MS = 1000;
 
 const COLOR_PICK: { id: CardColor; label: string; className: string }[] = [
-  { id: "red", label: "Red", className: "bg-gradient-to-br from-[#ff3b5c] to-[#c2184a]" },
-  { id: "blue", label: "Blue", className: "bg-gradient-to-br from-[#00b4ff] to-[#006dbf]" },
-  { id: "green", label: "Green", className: "bg-gradient-to-br from-[#00d97e] to-[#009624]" },
-  { id: "yellow", label: "Yellow", className: "bg-gradient-to-br from-[#ffe566] to-[#ffb300]" },
+  { id: "red", label: "Red", className: "bg-[#E23D4B] border-2 border-[#0B0F14] hover:brightness-95" },
+  { id: "blue", label: "Blue", className: "bg-[#2E5BBA] border-2 border-[#0B0F14] hover:brightness-95" },
+  { id: "green", label: "Green", className: "bg-[#0F9D7A] border-2 border-[#0B0F14] hover:brightness-95" },
+  { id: "yellow", label: "Yellow", className: "bg-[#F0C808] border-2 border-[#0B0F14] text-[#0B0F14] hover:brightness-95" },
 ];
 
 function isWildCard(card: Card): boolean {
@@ -84,6 +85,7 @@ export default function GamePage() {
   const isMyTurn = Boolean(
     game && playerId && game.currentTurnPlayerId === playerId && game.gameStarted
   );
+  const pendingDraw = game?.pendingDraw ?? 0;
 
   async function playCard(card: Card, chosenColor?: CardColor) {
     const pid = getPlayerId();
@@ -151,21 +153,21 @@ export default function GamePage() {
         <title>{roomId ? `Game · ${roomId}` : "Game"}</title>
       </Head>
 
-      <div className="min-h-screen flex flex-col bg-[#24160e] text-slate-900">
-        <header className="shrink-0 flex items-center justify-between gap-3 border-b border-white/[0.08] bg-gradient-to-r from-[#1e140c]/95 via-[#2a1a12]/95 to-[#1e140c]/95 px-4 py-3 text-white shadow-[0_8px_32px_rgba(0,0,0,0.35)] backdrop-blur-[10px]">
+      <div className="game-shell-bg flex min-h-screen flex-col text-[#0B0F14]">
+        <header className="sticky top-0 z-40 flex shrink-0 items-center justify-between gap-3 border-b-4 border-[#0B0F14] bg-[#FFFDF8] px-4 py-3">
           <Link
             href={`/lobby/${roomId}`}
-            className="text-sm font-semibold text-white/90 transition-colors hover:text-white"
+            className="text-sm font-semibold text-[#0B0F14]/70 transition-colors hover:text-[#0B0F14]"
           >
             ← Lobby
           </Link>
-          <div className="flex min-w-0 items-center gap-2.5 text-xs">
-            <span className="shrink-0 rounded-md border border-white/15 bg-black/35 px-2.5 py-1 font-mono text-[11px] font-medium tracking-[0.14em] text-white/95 shadow-inner">
+          <div className="flex min-w-0 items-center gap-3 text-xs">
+            <span className="shrink-0 rounded-md border-2 border-[#0B0F14] bg-white px-2.5 py-1 font-mono text-[11px] font-semibold tracking-[0.18em] text-[#0B0F14]">
               {roomId}
             </span>
-            <span className="inline max-w-[40vw] truncate text-white/80 sm:max-w-none">
+            <span className="inline max-w-[36vw] truncate text-[#0B0F14]/75 sm:max-w-none">
               {game?.ownerId === playerId ? (
-                <span className="mr-0.5" title="Room owner" aria-hidden>
+                <span className="mr-1 opacity-80" title="Room owner" aria-hidden>
                   👑
                 </span>
               ) : null}
@@ -175,259 +177,244 @@ export default function GamePage() {
         </header>
 
         {game?.gameOver ? (
-          <div className="flex-1 flex items-center justify-center px-4 py-12">
-            <div className="w-full max-w-md rounded-3xl bg-white border border-slate-200 shadow-[0_20px_50px_rgba(0,0,0,0.08)] p-8 text-center">
-              <p className="text-5xl mb-2" aria-hidden>
-                🏆
-              </p>
-              <p className="text-2xl font-bold text-slate-900">{game.gameOver.winnerName} wins!</p>
-              <p className="text-slate-500 mt-2 text-sm">Head back to the lobby for another round.</p>
-              <Button className="mt-8 w-full py-3" variant="secondary" onClick={() => void router.push(`/lobby/${roomId}`)}>
+          <div className="flex flex-1 items-center justify-center px-4 py-14">
+            <div className="w-full max-w-md rounded-2xl border-4 border-[#0B0F14] bg-[#FFFDF8] p-10 text-center">
+              <p className="font-display text-4xl font-semibold tracking-tight text-[#0B0F14] sm:text-5xl">Round over</p>
+              <p className="mt-6 text-2xl font-bold text-[#0B0F14]">{game.gameOver.winnerName}</p>
+              <p className="mt-1 text-[#0B0F14]/60">won this hand.</p>
+              <Button className="mt-10 w-full py-3.5" variant="secondary" onClick={() => void router.push(`/lobby/${roomId}`)}>
                 Return to lobby
               </Button>
             </div>
           </div>
         ) : (
           <>
-            <div className="relative flex min-h-0 flex-1 flex-col p-2 sm:p-3 md:p-4">
-              <div
-                className="
-                  relative flex min-h-0 flex-1 flex-col overflow-visible rounded-[1.05rem]
-                  border-[5px] border-[#3d2816] pb-0
-                  bg-gradient-to-b from-[#5c4030] via-[#4a3322] to-[#2f1f14]
-                  shadow-[0_1px_0_rgba(255,255,255,0.07)_inset,0_20px_50px_rgba(0,0,0,0.45),0_4px_0_#1a120c]
-                "
-              >
-                {/* Wood rail highlight */}
-                <div
-                  className="pointer-events-none absolute inset-0 rounded-[1rem] shadow-[inset_0_2px_6px_rgba(0,0,0,0.35)]"
-                  aria-hidden
-                />
-                {/* Felt well — layered for depth */}
-                <div
-                  className="
-                    pointer-events-none absolute inset-[11px] rounded-[0.72rem]
-                    bg-[#3d5c38]
-                    shadow-[inset_0_0_100px_rgba(0,0,0,0.32),inset_0_1px_0_rgba(255,255,255,0.11)]
-                  "
-                  aria-hidden
-                />
-                <div
-                  className="
-                    pointer-events-none absolute inset-[11px] rounded-[0.72rem]
-                    bg-[radial-gradient(ellipse_92%_72%_at_50%_38%,rgba(95,139,90,0.97)_0%,rgba(62,97,60,1)_48%,rgba(42,72,44,1)_100%)]
-                  "
-                  aria-hidden
-                />
-                <div
-                  className="
-                    pointer-events-none absolute inset-[11px] rounded-[0.72rem] opacity-[0.4]
-                    bg-[radial-gradient(circle_at_12px_12px,rgba(28,48,32,0.55)_0_2px,transparent_3px)]
-                    bg-[length:26px_26px]
-                  "
-                  aria-hidden
-                />
-                {/* Soft vignette on felt */}
-                <div
-                  className="
-                    pointer-events-none absolute inset-[11px] rounded-[0.72rem]
-                    shadow-[inset_0_0_120px_rgba(0,0,0,0.28)]
-                  "
-                  aria-hidden
-                />
-
-                {topOpponent ? (
-                  <div className="relative z-10 flex w-full shrink-0 flex-col items-center gap-1 px-1 pt-2 sm:pt-3">
-                    <div className="flex max-w-full flex-wrap items-end justify-center gap-0 overflow-x-auto">
-                      {Array.from({ length: topOpponent.cardCount }).map((_, i) => (
-                        <div key={`top-${i}`} className={`${HAND_OVERLAP_L} shrink-0`}>
-                          <CardBack />
+            <div className="relative flex min-h-0 flex-1 flex-col p-2 sm:p-3 md:p-5">
+              <div className="mx-auto flex min-h-0 w-full max-w-6xl flex-1 flex-col">
+                <div className="relative flex min-h-0 flex-1 flex-col overflow-visible rounded-2xl border-4 border-[#0B0F14] bg-[#b8e0d2] p-2 sm:p-3">
+                  <div className="relative flex min-h-0 flex-1 flex-col overflow-visible rounded-xl border-2 border-[#0B0F14] bg-[#b8e0d2]">
+                    {topOpponent ? (
+                      <div className="relative z-10 flex w-full shrink-0 flex-col items-center gap-2 px-2 pt-3 sm:pt-4">
+                        <div className="flex max-w-full flex-wrap items-end justify-center gap-0 overflow-x-auto pb-0.5">
+                          {Array.from({ length: topOpponent.cardCount }).map((_, i) => (
+                            <div key={`top-${i}`} className={`${HAND_OVERLAP_L} shrink-0`}>
+                              <CardBack />
+                            </div>
+                          ))}
                         </div>
-                      ))}
-                    </div>
-                    <div className="rounded-full border border-white/15 bg-black/25 px-2.5 py-0.5 text-[10px] font-semibold tracking-wide text-white/95 shadow-sm backdrop-blur-sm sm:text-[11px]">
-                      {topOpponent.name.toUpperCase()} · {topOpponent.cardCount} cards
-                    </div>
-                  </div>
-                ) : null}
+                        <div className="rounded-full border-2 border-[#0B0F14] bg-[#FFFDF8] px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-[#0B0F14] sm:text-[11px]">
+                          {topOpponent.name.toUpperCase()} · {topOpponent.cardCount} cards
+                        </div>
+                      </div>
+                    ) : null}
 
-                <div className="relative z-20 flex min-h-0 flex-1 flex-col">
-                  {leftOpponent ? (
-                    <div className="absolute left-1 top-1/2 z-10 flex max-h-[min(85vh,100%)] -translate-y-1/2 items-start gap-1 sm:left-2">
-                      <div className="flex max-h-[min(85vh,100%)] flex-col flex-wrap content-start items-center gap-0">
-                        {Array.from({ length: leftOpponent.cardCount }).map((_, i) => (
-                          <div key={`left-${i}`} className={`${OPPONENT_STACK_OVERLAP} shrink-0`}>
-                            <CardBack />
+                    <div className="relative z-20 flex min-h-0 flex-1 flex-col">
+                      {leftOpponent ? (
+                        <div className="absolute left-1 top-1/2 z-10 flex max-h-[min(85vh,100%)] -translate-y-1/2 items-start gap-1.5 sm:left-2">
+                          <div className="flex max-h-[min(85vh,100%)] flex-col flex-wrap content-start items-center gap-0">
+                            {Array.from({ length: leftOpponent.cardCount }).map((_, i) => (
+                              <div key={`left-${i}`} className={`${OPPONENT_STACK_OVERLAP} shrink-0`}>
+                                <CardBack />
+                              </div>
+                            ))}
                           </div>
-                        ))}
-                      </div>
-                      <div className="-rotate-90 whitespace-nowrap rounded-full border border-white/15 bg-black/25 px-2 py-0.5 text-[10px] font-semibold tracking-wide text-white/95 shadow-sm backdrop-blur-sm">
-                        {leftOpponent.name.toUpperCase()}
-                      </div>
-                    </div>
-                  ) : null}
-
-                  {rightOpponent ? (
-                    <div className="absolute right-1 top-1/2 z-10 flex max-h-[min(85vh,100%)] -translate-y-1/2 items-start gap-1 sm:right-2">
-                      <div className="rotate-90 whitespace-nowrap rounded-full border border-white/15 bg-black/25 px-2 py-0.5 text-[10px] font-semibold tracking-wide text-white/95 shadow-sm backdrop-blur-sm">
-                        {rightOpponent.name.toUpperCase()}
-                      </div>
-                      <div className="flex max-h-[min(85vh,100%)] flex-col flex-wrap content-start items-center gap-0">
-                        {Array.from({ length: rightOpponent.cardCount }).map((_, i) => (
-                          <div key={`right-${i}`} className={`${OPPONENT_STACK_OVERLAP} shrink-0`}>
-                            <CardBack />
+                          <div className="-rotate-90 whitespace-nowrap rounded-full border-2 border-[#0B0F14] bg-[#FFFDF8] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-[#0B0F14]">
+                            {leftOpponent.name.toUpperCase()}
                           </div>
-                        ))}
-                      </div>
-                    </div>
-                  ) : null}
+                        </div>
+                      ) : null}
 
-                  {extraOpponents.length ? (
-                    <div className="absolute right-2 top-3 z-20 sm:right-3 sm:top-4">
-                      <span className="inline-block rounded-full border border-white/15 bg-black/30 px-2 py-0.5 text-[10px] font-semibold text-white/95 shadow-sm backdrop-blur-sm">
-                        +{extraOpponents.length} more
-                      </span>
-                    </div>
-                  ) : null}
+                      {rightOpponent ? (
+                        <div className="absolute right-1 top-1/2 z-10 flex max-h-[min(85vh,100%)] -translate-y-1/2 items-start gap-1.5 sm:right-2">
+                          <div className="rotate-90 whitespace-nowrap rounded-full border-2 border-[#0B0F14] bg-[#FFFDF8] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-[#0B0F14]">
+                            {rightOpponent.name.toUpperCase()}
+                          </div>
+                          <div className="flex max-h-[min(85vh,100%)] flex-col flex-wrap content-start items-center gap-0">
+                            {Array.from({ length: rightOpponent.cardCount }).map((_, i) => (
+                              <div key={`right-${i}`} className={`${OPPONENT_STACK_OVERLAP} shrink-0`}>
+                                <CardBack />
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ) : null}
 
-                  {err ? (
-                    <p className="absolute left-1/2 top-2 z-30 max-w-[90%] -translate-x-1/2 text-center text-sm font-medium text-red-800 bg-red-50 border border-red-100 rounded-xl px-3 py-2">
-                      {err}
-                    </p>
-                  ) : null}
+                      {extraOpponents.length ? (
+                        <div className="absolute right-2 top-3 z-20 sm:right-3 sm:top-4">
+                          <span className="inline-block rounded-full border-2 border-[#0B0F14] bg-[#FFFDF8] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-[#0B0F14]">
+                            +{extraOpponents.length} more
+                          </span>
+                        </div>
+                      ) : null}
 
-                  {/* Vertically centered on the felt: Draw | turn arrow | Discard */}
-                  <div className="flex flex-1 items-center justify-center px-2 py-3 sm:px-4 sm:py-6">
-                    <div
-                      className="
-                        flex w-full max-w-4xl flex-row items-end justify-center
-                        gap-8 sm:gap-12 md:gap-20 lg:gap-28
-                      "
-                    >
-                      <div className="flex flex-col items-center gap-1">
-                        <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-white/90 [text-shadow:0_1px_2px_rgba(0,0,0,0.45)] sm:text-[11px]">
-                          Draw
-                        </span>
-                        <button
-                          type="button"
-                          disabled={!isMyTurn || pending !== null}
-                          title={isMyTurn ? "Click to draw one card" : "Not your turn"}
-                          onClick={() => void draw()}
-                          className={`
-                            group relative shrink-0 rounded-lg focus:outline-none
-                            focus-visible:ring-2 focus-visible:ring-amber-200/80 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent
-                            disabled:cursor-not-allowed disabled:opacity-50
-                            ${isMyTurn && !pending ? "cursor-pointer shadow-[0_6px_20px_rgba(0,0,0,0.35)] transition-transform hover:-translate-y-0.5 hover:brightness-105 active:translate-y-0" : ""}
+                      {err ? (
+                        <p className="absolute left-1/2 top-2 z-30 max-w-[min(92%,24rem)] -translate-x-1/2 rounded-xl border-2 border-[#0B0F14] bg-[#FF5C5C] px-4 py-2.5 text-center text-sm font-semibold text-[#0B0F14]">
+                          {err}
+                        </p>
+                      ) : null}
+
+                      <div className="flex flex-1 items-center justify-center px-2 py-4 sm:px-4 sm:py-6">
+                        <div className="flex w-full max-w-4xl flex-row items-end justify-center gap-7 sm:gap-12 md:gap-20 lg:gap-28">
+                          <div className="flex flex-col items-center gap-2">
+                            <span className="font-display text-[10px] font-semibold uppercase tracking-[0.22em] text-[#0B0F14]/80 sm:text-[11px]">
+                              {pendingDraw > 0 && isMyTurn ? `Take ${pendingDraw}` : "Draw"}
+                            </span>
+                            <button
+                              type="button"
+                              disabled={!isMyTurn || pending !== null}
+                              title={
+                                !isMyTurn
+                                  ? "Not your turn"
+                                  : pendingDraw > 0
+                                    ? `Take ${pendingDraw} stacked card${pendingDraw === 1 ? "" : "s"} (+2/+4 chain)`
+                                    : "Draw one card from the deck"
+                              }
+                              onClick={() => void draw()}
+                              className={`
+                            group relative shrink-0 rounded-md focus:outline-none
+                            focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#0B0F14] focus-visible:outline-offset-2
+                            disabled:cursor-not-allowed disabled:opacity-45
+                            ${isMyTurn && !pending ? "cursor-pointer transition-transform hover:-translate-y-0.5 active:translate-y-0" : ""}
                           `}
-                          aria-label="Draw one card from the deck"
-                        >
-                          <CardBack
-                            className={`${isMyTurn && !pending ? "ring-2 ring-amber-300/50" : "opacity-90"}`}
-                          />
-                        </button>
-                      </div>
+                              aria-label={
+                                pendingDraw > 0 && isMyTurn
+                                  ? `Take ${pendingDraw} cards from the penalty`
+                                  : "Draw one card from the deck"
+                              }
+                            >
+                              <CardBack
+                                className={`${isMyTurn && !pending ? "outline outline-[3px] outline-[#0B0F14] outline-offset-2" : "opacity-90"}`}
+                              />
+                            </button>
+                          </div>
 
-                      <div
-                        className="
-                          flex min-h-[9.625rem] min-w-[5.5rem] flex-col items-center justify-end gap-1
+                          <div
+                            className="
+                          flex min-h-[9.625rem] min-w-[5.5rem] flex-col items-center justify-end gap-2
                           px-2 sm:min-h-[10.325rem] sm:min-w-[7rem] md:min-h-[11.025rem] md:min-w-[8rem]
                         "
-                        aria-live="polite"
-                      >
-                        {game?.gameStarted && game.currentTurnPlayerId ? (
-                          <>
-                            <div className="flex flex-1 flex-col items-center justify-center pb-1">
-                              <div className="animate-turn-arrow-bob drop-shadow-[0_2px_8px_rgba(0,0,0,0.35)]">
-                                <div
-                                  className="text-2xl font-black leading-none text-amber-100 sm:text-3xl"
-                                  style={{
-                                    transform: `rotate(${turnArrowRotateDeg(game.currentTurnPlayerId, playerId, topOpponent, rightOpponent, leftOpponent)}deg)`,
-                                  }}
-                                  aria-hidden
-                                >
-                                  ▲
+                            aria-live="polite"
+                          >
+                            {game?.gameStarted && game.currentTurnPlayerId ? (
+                              <>
+                                <div className="flex flex-1 flex-col items-center justify-center pb-1">
+                                  <div
+                                    className={`rounded-full border-[3px] border-[#0B0F14] bg-[#FFFDF8] px-3 py-2 ${game.currentTurnPlayerId === playerId ? "animate-turn-border" : ""}`}
+                                  >
+                                    <div className="animate-turn-arrow-bob">
+                                      <div
+                                        className="text-2xl font-black leading-none text-[#FF5C5C] sm:text-3xl"
+                                        style={{
+                                          transform: `rotate(${turnArrowRotateDeg(game.currentTurnPlayerId, playerId, topOpponent, rightOpponent, leftOpponent)}deg)`,
+                                        }}
+                                        aria-hidden
+                                      >
+                                        ▲
+                                      </div>
+                                    </div>
+                                  </div>
                                 </div>
-                              </div>
-                            </div>
-                            <span className="max-w-[min(12rem,28vw)] truncate text-center text-[10px] font-semibold text-white/95 [text-shadow:0_1px_3px_rgba(0,0,0,0.5)] sm:max-w-[14rem] sm:text-[11px]">
-                              {game.currentTurnPlayerName}&apos;s turn
-                            </span>
-                          </>
-                        ) : (
-                          <span className="text-[10px] text-white/40 sm:text-[11px]">Waiting…</span>
-                        )}
-                      </div>
+                                <span className="max-w-[min(12rem,28vw)] truncate text-center text-[10px] font-semibold text-[#0B0F14] sm:max-w-[14rem] sm:text-[11px]">
+                                  {game.currentTurnPlayerName}&apos;s turn
+                                </span>
+                              </>
+                            ) : (
+                              <span className="text-[10px] text-[#0B0F14]/45 sm:text-[11px]">Waiting…</span>
+                            )}
+                          </div>
 
-                      <div className="flex flex-col items-center gap-1">
-                        <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-white/90 [text-shadow:0_1px_2px_rgba(0,0,0,0.45)] sm:text-[11px]">
-                          Discard
-                        </span>
-                        <div className="relative drop-shadow-[0_10px_24px_rgba(0,0,0,0.4)]">
-                          {game?.topCard ? (
-                            <PlayingCard
-                              card={game.topCard}
-                              activeColor={
-                                isWildCard(game.topCard) ? game.activeColor : undefined
-                              }
-                            />
-                          ) : (
-                            <div
-                              className={`rounded-[9px] border-2 border-dashed border-white/50 bg-white/12 ${TABLE_CARD_CLASS}`}
-                            />
-                          )}
+                          <div className="flex flex-col items-center gap-2">
+                            <span className="font-display text-[10px] font-semibold uppercase tracking-[0.22em] text-[#0B0F14]/80 sm:text-[11px]">
+                              Discard
+                            </span>
+                            <div className="relative">
+                              {game?.topCard ? (
+                                <PlayingCard
+                                  card={game.topCard}
+                                  activeColor={
+                                    isWildCard(game.topCard) ? game.activeColor : undefined
+                                  }
+                                />
+                              ) : (
+                                <div
+                                  className={`rounded-md border-[3px] border-dashed border-[#0B0F14]/40 bg-[#FFFDF8]/80 ${TABLE_CARD_CLASS}`}
+                                />
+                              )}
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                </div>
 
-                <div className="relative z-30 shrink-0 px-0 pb-2 [padding-bottom:calc(env(safe-area-inset-bottom)+0.5rem)] sm:px-1">
-                  <p className="mb-1.5 text-center text-[10px] font-semibold tracking-wide text-white/95 [text-shadow:0_1px_3px_rgba(0,0,0,0.55)] sm:text-[11px] md:text-xs">
-                    Your hand · {nickname || "Guest"} · {myCards.length}{" "}
-                    {myCards.length === 1 ? "card" : "cards"}
-                  </p>
-                  <div className="mx-auto flex max-w-full flex-wrap content-end items-end justify-center gap-0 [isolation:isolate]">
-                    {myCards.map((card, i) => (
-                      <button
-                        key={`${card.color}-${card.number}-${i}`}
-                        type="button"
-                        disabled={!isMyTurn || pending !== null}
-                        onClick={() => void playCard(card)}
-                        className={`
+                    <div className="relative z-30 shrink-0 px-1 pb-2 [padding-bottom:calc(env(safe-area-inset-bottom)+0.65rem)] sm:px-2">
+                      <div className="relative mx-auto max-w-full rounded-t-2xl border-t-2 border-x-2 border-[#0B0F14] border-b-0 bg-[#FFFDF8] px-2 pb-3 pt-3 sm:px-5 sm:pt-4">
+                        <p className="mb-2 text-center text-[10px] font-semibold uppercase tracking-[0.2em] text-[#0B0F14]/65 sm:text-[11px] md:text-xs">
+                          Your hand · {nickname || "Guest"} · {myCards.length}{" "}
+                          {myCards.length === 1 ? "card" : "cards"}
+                          {pendingDraw > 0 && isMyTurn ? (
+                            <span className="mt-1 block font-display normal-case tracking-normal text-[#FF5C5C]">
+                              +2/+4 chain: play another +2 or +4, or use the deck to take {pendingDraw} cards.
+                            </span>
+                          ) : null}
+                        </p>
+                        <div className="mx-auto flex max-w-full flex-wrap content-end items-end justify-center gap-0 [isolation:isolate]">
+                          {myCards.map((card, i) => {
+                            const playable =
+                              game &&
+                              isCardPlayable(
+                                card,
+                                game.topCard,
+                                game.activeColor,
+                                myCards,
+                                pendingDraw
+                              );
+                            const canClick = isMyTurn && pending === null && playable;
+                            return (
+                              <button
+                                key={`${card.color}-${card.number}-${i}`}
+                                type="button"
+                                disabled={!canClick}
+                                onClick={() => void playCard(card)}
+                                className={`
                           ${HAND_OVERLAP_L}
-                          relative z-0 shrink-0 origin-bottom rounded-lg border-0 bg-transparent p-0
-                          focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white/60
-                          disabled:opacity-100
+                          relative z-0 shrink-0 origin-bottom rounded-xl border-0 bg-transparent p-0
+                          focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#0B0F14] focus-visible:outline-offset-1
+                          disabled:cursor-not-allowed
                           active:translate-y-px
                           hover:!z-30
+                        ${!canClick ? (isMyTurn ? "opacity-45" : "opacity-90") : ""}
                         `}
-                        style={{ zIndex: i }}
-                      >
-                        <PlayingCard card={card} />
-                      </button>
-                    ))}
+                                style={{ zIndex: i }}
+                              >
+                                <PlayingCard card={card} />
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
 
               {wildPending ? (
                 <div
-                  className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 px-4"
+                  className="fixed inset-0 z-[200] flex items-center justify-center bg-[#0B0F14]/35 px-4"
                   role="dialog"
                   aria-modal="true"
                   aria-labelledby="wild-pick-title"
                 >
-                  <div className="w-full max-w-sm rounded-2xl bg-white p-6 border border-slate-200">
-                    <p id="wild-pick-title" className="text-center text-lg font-bold text-slate-900">
-                      Pick a color
+                  <div className="w-full max-w-sm rounded-2xl border-4 border-[#0B0F14] bg-[#FFFDF8] p-7">
+                    <p id="wild-pick-title" className="text-center font-display text-2xl font-semibold text-[#0B0F14]">
+                      Choose color
                     </p>
-                    <p className="mt-1 text-center text-sm text-slate-500">Next cards must match this color.</p>
-                    <div className="mt-5 grid grid-cols-2 gap-3">
+                    <p className="mt-2 text-center text-sm text-[#0B0F14]/60">The next card must match this color.</p>
+                    <div className="mt-6 grid grid-cols-2 gap-3">
                       {COLOR_PICK.map((c) => (
                         <button
                           key={c.id}
                           type="button"
-                          className={`rounded-xl py-4 text-sm font-bold text-white border border-black/10 ${c.className}`}
+                          className={`rounded-xl py-4 text-sm font-bold transition active:scale-[0.98] ${c.className} ${c.id === "yellow" ? "" : "text-white"}`}
                           onClick={() => {
                             const card = wildPending;
                             setWildPending(null);
@@ -440,7 +427,7 @@ export default function GamePage() {
                     </div>
                     <button
                       type="button"
-                      className="mt-4 w-full rounded-xl border border-slate-200 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                      className="mt-5 w-full rounded-xl border-2 border-[#0B0F14] bg-white py-2.5 text-sm font-semibold text-[#0B0F14] transition hover:bg-[#edeae4]"
                       onClick={() => setWildPending(null)}
                     >
                       Cancel
