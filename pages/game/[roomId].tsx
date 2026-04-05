@@ -1,12 +1,13 @@
 import Head from "next/head";
 import Link from "next/link";
 import { useRouter } from "next/router";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Button } from "@/components/Button";
 import { CardBack } from "@/components/CardBack";
 import { PlayingCard } from "@/components/PlayingCard";
 import type { Card, CardColor, GameState } from "@/lib/types";
 import { HAND_OVERLAP_L, OPPONENT_STACK_OVERLAP, TABLE_CARD_CLASS } from "@/lib/cardLayout";
+import type { CardVariant } from "@/components/PlayingCard";
 import { isCardPlayable } from "@/lib/playable";
 import { getPlayerId, STORAGE_NICKNAME } from "@/lib/session";
 
@@ -141,6 +142,36 @@ export default function GamePage() {
   }
 
   const myCards = game?.myCards ?? [];
+  const handWrapRef = useRef<HTMLDivElement>(null);
+  /** 0 = full table size, 1 = one wrapped row (smaller), 2 = two+ rows (smallest). */
+  const [handTier, setHandTier] = useState<0 | 1 | 2>(0);
+
+  useLayoutEffect(() => {
+    const el = handWrapRef.current;
+    if (!el) return;
+    const measure = () => {
+      const firstBtn = el.querySelector("button");
+      if (!firstBtn) {
+        setHandTier(0);
+        return;
+      }
+      const cardH = firstBtn.getBoundingClientRect().height;
+      if (cardH < 12) return;
+      const rowGuess = Math.max(cardH * 0.9, 1);
+      const approxRows = el.scrollHeight / rowGuess;
+      if (approxRows >= 2.45) setHandTier(2);
+      else if (approxRows >= 1.33) setHandTier(1);
+      else setHandTier(0);
+    };
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    measure();
+    return () => ro.disconnect();
+  }, [myCards.length]);
+
+  const handCardVariant: CardVariant =
+    handTier === 0 ? "table" : handTier === 1 ? "hand" : "handSm";
+
   const opponents = (game?.players ?? []).filter((p) => p.id !== playerId);
   const topOpponent = opponents[0] ?? null;
   const rightOpponent = opponents[1] ?? null;
@@ -189,8 +220,8 @@ export default function GamePage() {
           </div>
         ) : (
           <>
-            <div className="relative flex min-h-0 flex-1 flex-col p-2 sm:p-3 md:p-5">
-              <div className="mx-auto flex min-h-0 w-full max-w-6xl flex-1 flex-col">
+            <div className="relative flex min-h-0 flex-1 flex-col p-2 sm:p-3 md:p-4 lg:p-5">
+              <div className="mx-auto flex min-h-0 w-full max-w-[min(92rem,calc(100vw-0.75rem))] flex-1 flex-col xl:max-w-[min(100rem,calc(100vw-1rem))]">
                 <div className="relative flex min-h-0 flex-1 flex-col overflow-visible rounded-2xl border-4 border-[#0B0F14] bg-[#b8e0d2] p-2 sm:p-3">
                   <div className="relative flex min-h-0 flex-1 flex-col overflow-visible rounded-xl border-2 border-[#0B0F14] bg-[#b8e0d2]">
                     {topOpponent ? (
@@ -254,7 +285,7 @@ export default function GamePage() {
                       ) : null}
 
                       <div className="flex flex-1 items-center justify-center px-2 py-4 sm:px-4 sm:py-6">
-                        <div className="flex w-full max-w-4xl flex-row items-end justify-center gap-7 sm:gap-12 md:gap-20 lg:gap-28">
+                        <div className="flex w-full max-w-[min(72rem,100%)] flex-row items-end justify-center gap-6 sm:gap-10 md:gap-16 lg:gap-24 xl:gap-28">
                           <div className="flex flex-col items-center gap-2">
                             <span className="font-display text-[10px] font-semibold uppercase tracking-[0.22em] text-[#0B0F14]/80 sm:text-[11px]">
                               {pendingDraw > 0 && isMyTurn ? `Take ${pendingDraw}` : "Draw"}
@@ -273,7 +304,7 @@ export default function GamePage() {
                               className={`
                             group relative shrink-0 rounded-md focus:outline-none
                             focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#0B0F14] focus-visible:outline-offset-2
-                            disabled:cursor-not-allowed disabled:opacity-45
+                            disabled:cursor-not-allowed
                             ${isMyTurn && !pending ? "cursor-pointer transition-transform hover:-translate-y-0.5 active:translate-y-0" : ""}
                           `}
                               aria-label={
@@ -283,7 +314,11 @@ export default function GamePage() {
                               }
                             >
                               <CardBack
-                                className={`${isMyTurn && !pending ? "outline outline-[3px] outline-[#0B0F14] outline-offset-2" : "opacity-90"}`}
+                                className={
+                                  isMyTurn && !pending
+                                    ? "outline outline-[3px] outline-[#0B0F14] outline-offset-2"
+                                    : ""
+                                }
                               />
                             </button>
                           </div>
@@ -357,7 +392,10 @@ export default function GamePage() {
                             </span>
                           ) : null}
                         </p>
-                        <div className="mx-auto flex max-w-full flex-wrap content-end items-end justify-center gap-0 [isolation:isolate]">
+                        <div
+                          ref={handWrapRef}
+                          className="mx-auto flex max-w-full flex-wrap content-end items-end justify-center gap-x-2 gap-y-2 sm:gap-x-2.5 sm:gap-y-2.5 md:gap-x-3 [isolation:isolate]"
+                        >
                           {myCards.map((card, i) => {
                             const playable =
                               game &&
@@ -376,17 +414,15 @@ export default function GamePage() {
                                 disabled={!canClick}
                                 onClick={() => void playCard(card)}
                                 className={`
-                          ${HAND_OVERLAP_L}
                           relative z-0 shrink-0 origin-bottom rounded-xl border-0 bg-transparent p-0
                           focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#0B0F14] focus-visible:outline-offset-1
                           disabled:cursor-not-allowed
                           active:translate-y-px
                           hover:!z-30
-                        ${!canClick ? (isMyTurn ? "opacity-45" : "opacity-90") : ""}
                         `}
                                 style={{ zIndex: i }}
                               >
-                                <PlayingCard card={card} />
+                                <PlayingCard card={card} variant={handCardVariant} />
                               </button>
                             );
                           })}

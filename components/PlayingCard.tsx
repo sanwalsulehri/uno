@@ -1,5 +1,5 @@
 import type { Card as CardType, CardColor } from "@/lib/types";
-import { TABLE_CARD_CLASS } from "@/lib/cardLayout";
+import { HAND_CARD_CLASS, HAND_CARD_CLASS_SM, TABLE_CARD_CLASS } from "@/lib/cardLayout";
 
 export { TABLE_CARD_CLASS } from "@/lib/cardLayout";
 export { HAND_OVERLAP_L } from "@/lib/cardLayout";
@@ -53,7 +53,7 @@ export function cardDisplayLabel(card: CardType): string {
   return String(card.number);
 }
 
-export type CardVariant = "table" | "tiny";
+export type CardVariant = "table" | "tiny" | "hand" | "handSm";
 
 type Props = {
   card: CardType;
@@ -65,26 +65,36 @@ type Props = {
 const cornerTl: Record<CardVariant, string> = {
   table: "left-2 top-2 text-sm sm:text-base md:text-lg font-black tracking-tight",
   tiny: "left-1 top-1 text-[10px] font-black",
+  hand: "left-1.5 top-1.5 text-xs sm:text-sm md:text-base font-black tracking-tight",
+  handSm: "left-1 top-1 text-[10px] sm:text-xs md:text-sm font-black tracking-tight",
 };
 
 const cornerBr: Record<CardVariant, string> = {
   table: "right-2 bottom-2 text-sm sm:text-base md:text-lg font-black tracking-tight",
   tiny: "right-1 bottom-1 text-[10px] font-black",
+  hand: "right-1.5 bottom-1.5 text-xs sm:text-sm md:text-base font-black tracking-tight",
+  handSm: "right-1 bottom-1 text-[10px] sm:text-xs md:text-sm font-black tracking-tight",
 };
 
 const centerSize: Record<CardVariant, string> = {
   table: "text-3xl sm:text-4xl md:text-[2.75rem] font-black tracking-tight font-display",
   tiny: "text-lg font-display",
+  hand: "text-2xl sm:text-3xl md:text-4xl font-black tracking-tight font-display",
+  handSm: "text-xl sm:text-2xl md:text-3xl font-black tracking-tight font-display",
 };
 
 const centerSizeSpecial: Record<CardVariant, string> = {
   table: "text-base sm:text-lg md:text-xl font-bold leading-tight tracking-wide font-display",
   tiny: "text-lg font-black font-display",
+  hand: "text-sm sm:text-base md:text-lg font-bold leading-tight tracking-wide font-display",
+  handSm: "text-xs sm:text-sm md:text-base font-bold leading-tight tracking-wide font-display",
 };
 
 const shell: Record<CardVariant, string> = {
   table: TABLE_CARD_CLASS,
   tiny: "w-10 h-14",
+  hand: HAND_CARD_CLASS,
+  handSm: HAND_CARD_CLASS_SM,
 };
 
 /** Center badge: white field, hard black border */

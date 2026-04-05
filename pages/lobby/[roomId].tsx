@@ -75,6 +75,24 @@ export default function LobbyPage() {
 
   const isOwner = Boolean(lobby && playerId && lobby.ownerId === playerId);
   const canStart = lobby && lobby.playerCount >= 2 && !lobby.gameStarted && isOwner;
+  const isInRoom = Boolean(
+    lobby && playerId && lobby.players.some((p) => p.id === playerId)
+  );
+
+  const [copied, setCopied] = useState(false);
+  const inviteUrl =
+    typeof window !== "undefined" && roomId ? `${window.location.origin}/join/${roomId}` : "";
+
+  async function copyInviteLink() {
+    if (!inviteUrl) return;
+    try {
+      await navigator.clipboard.writeText(inviteUrl);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 2500);
+    } catch {
+      setErr("Could not copy — select the link and copy manually.");
+    }
+  }
 
   return (
     <>
@@ -96,9 +114,45 @@ export default function LobbyPage() {
           <div className="rounded-2xl border-4 border-[#0B0F14] bg-[#FFFDF8] p-8">
             <h1 className="font-display text-3xl font-semibold tracking-tight text-[#0B0F14]">Lobby</h1>
             <p className="mt-1 text-[#0B0F14]/60">
-              Room code:{" "}
-              <span className="font-mono font-semibold tracking-[0.15em] text-[#0B0F14]">{roomId || "…"}</span>
+              {isOwner ? (
+                <span className="font-semibold text-[#0B0F14]">Share the invite link</span>
+              ) : (
+                <span>Waiting for the host to start</span>
+              )}
             </p>
+
+            {roomId ? (
+              <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-stretch">
+                <div className="min-w-0 flex-1 rounded-xl border-2 border-[#0B0F14] bg-white px-3 py-2.5 font-mono text-[11px] leading-snug text-[#0B0F14] sm:text-xs break-all">
+                  {inviteUrl || `…/join/${roomId}`}
+                </div>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="shrink-0 py-3 sm:px-6"
+                  onClick={() => void copyInviteLink()}
+                >
+                  {copied ? "Copied!" : "Copy link"}
+                </Button>
+              </div>
+            ) : null}
+
+            <p className="mt-3 text-xs text-[#0B0F14]/50">
+              Code:{" "}
+              <span className="font-mono font-semibold tracking-[0.15em] text-[#0B0F14]/80">{roomId || "…"}</span>
+              {" · "}
+              friends can open the link and only enter a name
+            </p>
+
+            {lobby && playerId && !isInRoom ? (
+              <p className="mt-4 rounded-2xl border-2 border-[#0B0F14] bg-[#b8e0d2] px-4 py-3 text-sm text-[#0B0F14]">
+                You&apos;re not in this room yet.{" "}
+                <Link href={`/join/${roomId}`} className="font-bold underline">
+                  Join here
+                </Link>{" "}
+                (nickname only).
+              </p>
+            ) : null}
 
             {lobby?.gameOver ? (
               <p className="mt-4 text-sm rounded-2xl bg-amber-50 border border-amber-100 text-amber-900 px-4 py-3">
@@ -124,15 +178,15 @@ export default function LobbyPage() {
             <div className="mt-8 flex flex-col gap-3">
               <Button
                 className="w-full py-3"
-                disabled={!canStart || starting}
+                disabled={!canStart || starting || !isInRoom}
                 onClick={() => void handleStart()}
               >
                 {starting ? "Starting…" : "Start game"}
               </Button>
-              {lobby && lobby.playerCount < 2 && !lobby.gameStarted ? (
+              {lobby && !isInRoom ? null : lobby && lobby.playerCount < 2 && !lobby.gameStarted ? (
                 <p className="text-center text-sm text-[#0B0F14]/60">Need at least two players to start.</p>
               ) : null}
-              {lobby && lobby.playerCount >= 2 && !lobby.gameStarted && !isOwner ? (
+              {lobby && isInRoom && lobby.playerCount >= 2 && !lobby.gameStarted && !isOwner ? (
                 <p className="text-center text-sm text-[#0B0F14]/60">Only 👑 the room owner can start the game.</p>
               ) : null}
             </div>

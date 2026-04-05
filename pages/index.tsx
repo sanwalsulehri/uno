@@ -81,7 +81,9 @@ export default function HomePage() {
               🃏
             </p>
             <h1 className="font-display text-4xl font-semibold tracking-tight text-[#0B0F14] sm:text-5xl">Play UNO online</h1>
-            <p className="mt-2 text-sm text-[#0B0F14]/65">Guests · 2–4 players · quick rooms</p>
+            <p className="mt-2 text-sm text-[#0B0F14]/65">
+              Create a room, copy the invite link from the lobby, friends open it and pick a name.
+            </p>
           </div>
 
           <div className="space-y-6 rounded-2xl border-4 border-[#0B0F14] bg-[#FFFDF8] p-8">
@@ -118,9 +120,13 @@ export default function HomePage() {
                 <div className="w-full border-t-2 border-[#0B0F14]/15" />
               </div>
               <div className="relative flex justify-center text-xs font-medium uppercase tracking-wider text-[#0B0F14]/45">
-                <span className="bg-[#FFFDF8] px-3">Join a room</span>
+                <span className="bg-[#FFFDF8] px-3">Or join with a code</span>
               </div>
             </div>
+
+            <p className="text-center text-xs text-[#0B0F14]/45">
+              If you don&apos;t have a link, ask for the 6-character code.
+            </p>
 
             <div className="flex gap-2">
               <input

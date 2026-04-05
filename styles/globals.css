@@ -9,8 +9,7 @@
   --paper: #fffdf8;
   --field: #b8e0d2;
   --accent: #ff5c5c;
-  --font-dm: "DM Sans", system-ui, sans-serif;
-  --font-fraunces: "Fraunces", Georgia, "Times New Roman", serif;
+  /* --font-dm / --font-fraunces come from `next/font` classes on the root wrapper in `_app`. */
 }
 
 html,

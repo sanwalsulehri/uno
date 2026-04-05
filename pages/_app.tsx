@@ -1,26 +1,26 @@
 import type { AppProps } from "next/app";
-import Head from "next/head";
+import { DM_Sans, Fraunces } from "next/font/google";
 import "@/styles/globals.css";
 
-/** Fonts via `next/head` — avoids a custom `_document` (which webpack dev can break via vendor-chunks). */
+const dmSans = DM_Sans({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-dm",
+  display: "swap",
+});
+
+const fraunces = Fraunces({
+  subsets: ["latin"],
+  weight: ["400", "600", "700"],
+  variable: "--font-fraunces",
+  display: "swap",
+});
+
+/** Self-hosted fonts via `next/font` avoid extra `<link>` churn that can race with CSS HMR (parentNode null). */
 export default function App({ Component, pageProps }: AppProps) {
   return (
-    <>
-      <Head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link
-          href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap"
-          rel="stylesheet"
-        />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700&display=swap"
-          rel="stylesheet"
-        />
-      </Head>
-      <div className="font-sans antialiased">
-        <Component {...pageProps} />
-      </div>
-    </>
+    <div className={`${dmSans.variable} ${fraunces.variable} font-sans antialiased`}>
+      <Component {...pageProps} />
+    </div>
   );
 }

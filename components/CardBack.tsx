@@ -20,7 +20,7 @@ export function CardBack({ className = "" }: Props) {
         aria-hidden
       />
 
-      <div className="pointer-events-none absolute inset-0 flex justify-evenly opacity-25" aria-hidden>
+      <div className="pointer-events-none absolute inset-0 flex justify-evenly" aria-hidden>
         <span className="h-full w-px bg-[#F4F1DE]" />
         <span className="h-full w-px bg-[#F4F1DE]" />
         <span className="h-full w-px bg-[#F4F1DE]" />
